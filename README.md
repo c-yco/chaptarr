@@ -39,6 +39,7 @@ Chaptarr is an independent project. It is **not affiliated with the Servarr team
 
 ### Integration & Automation
 * **Standard *arr Integrations** - Works with the usual *arr-family download clients and indexer protocols
+* **Shelfmark Direct Downloads** - Search and queue books through Shelfmark, then import completed files or let Shelfmark deliver them directly to Grimmory
 
 ### Quality & Upgrades
 * **Automatic Upgrades** - Replace lower quality versions automatically
@@ -82,6 +83,49 @@ wget https://raw.githubusercontent.com/chaptarr/chaptarr/develop/docker-compose.
 # Edit paths in docker-compose.yml
 docker compose up -d
 ```
+
+### Shelfmark Direct Downloads
+
+1. Use a Shelfmark version with admin API-key support and the `/api/releases`,
+   `/api/releases/download`, `/api/status`, and `/api/localdownload` endpoints.
+   Enable its direct-download source and set `SHELFMARK_API_KEY`. Use HTTPS outside
+   a trusted local network; this key grants admin access. A read-only key will not work.
+2. In **Settings > Download Clients > Add > Direct Download**, add **Shelfmark**.
+   Enter its base URL (including any reverse-proxy prefix) and API key.
+3. For normal library imports, select a local **Download Folder** writable by
+   Chaptarr and outside the library. Enable Completed Download Handling.
+   Configure Shelfmark to retain completed files in its folder output so they
+   remain available through `/api/localdownload` until Chaptarr retrieves them.
+4. If Shelfmark delivers directly to **Grimmory** or another destination, enable
+   **Skip Library Import** instead. No download folder is required in this mode.
+   Chaptarr monitors Shelfmark to completion, then records that library import was
+   skipped using its ignored-download history. It does not retrieve the file,
+   run Chaptarr imports, or claim that the book exists in Chaptarr's library.
+   Books remain missing in Chaptarr unless the files are separately imported.
+   The setting is captured when a download is queued, so changing it does not
+   alter in-flight downloads.
+5. In **Settings > Indexers > Add > Direct Download**, add **Shelfmark** with the
+   same base URL and key. Select the corresponding Shelfmark download client
+   explicitly, especially when using multiple Shelfmark instances.
+
+Shelfmark supports automatic and interactive book/author searches, not RSS sync.
+Searches use only its direct-download source and filter for Chaptarr-supported
+ebook or single-file audio formats. Torrent/Usenet sources and archive downloads
+are not exposed by this integration.
+
+With normal imports, Chaptarr waits for Shelfmark's `complete` state, streams the
+book into a partial staging file, and exposes it to the normal matching, quality,
+renaming, and library import pipeline only after transfer succeeds. No shared
+filesystem or remote-path mapping is needed. Only downloads queued by this client
+are monitored; existing Shelfmark downloads are left alone. Queue records persist
+under Chaptarr's application-data directory across restarts. Each download keeps
+the staging folder selected when it was queued. If a Shelfmark queue entry
+disappears before retrieval, Chaptarr reports a warning rather than importing
+unrelated files.
+
+Removing a completed item affects only Chaptarr's tracking record and, when
+requested, its local staged copy. It never deletes Shelfmark's delivered book or
+Grimmory's library. Removing a queued/downloading item also cancels it in Shelfmark.
 
 ### PostgreSQL (Optional)
 

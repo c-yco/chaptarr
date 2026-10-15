@@ -26,11 +26,12 @@ class AddDownloadClientModalContent extends Component {
       schemaError,
       usenetDownloadClients,
       torrentDownloadClients,
+      directDownloadClients,
       onDownloadClientSelect,
       onModalClose
     } = this.props;
 
-    const implementationNameCounts = [...usenetDownloadClients, ...torrentDownloadClients].reduce((counts, client) => {
+    const implementationNameCounts = [...usenetDownloadClients, ...torrentDownloadClients, ...directDownloadClients].reduce((counts, client) => {
       const key = (client.implementationName || '').toLowerCase();
       counts[key] = (counts[key] || 0) + 1;
       return counts;
@@ -112,6 +113,20 @@ class AddDownloadClientModalContent extends Component {
                     }
                   </div>
                 </FieldSet>
+                <FieldSet legend={translate('DirectDownload')}>
+                  <div className={styles.downloadClients}>
+                    {
+                      directDownloadClients.map((downloadClient) => (
+                        <AddDownloadClientItem
+                          key={downloadClient.implementation}
+                          {...downloadClient}
+                          implementationName={getDisplayName(downloadClient)}
+                          onDownloadClientSelect={onDownloadClientSelect}
+                        />
+                      ))
+                    }
+                  </div>
+                </FieldSet>
               </div>
           }
         </ModalBody>
@@ -133,6 +148,7 @@ AddDownloadClientModalContent.propTypes = {
   schemaError: PropTypes.object,
   usenetDownloadClients: PropTypes.arrayOf(PropTypes.object).isRequired,
   torrentDownloadClients: PropTypes.arrayOf(PropTypes.object).isRequired,
+  directDownloadClients: PropTypes.arrayOf(PropTypes.object).isRequired,
   onDownloadClientSelect: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired
 };

@@ -70,6 +70,17 @@ namespace NzbDrone.Core.Download
                 return;
             }
 
+            if (trackedDownload.DownloadItem.SkipImport)
+            {
+                if (trackedDownload.State != TrackedDownloadState.Downloading)
+                {
+                    return;
+                }
+
+                SkipImport(trackedDownload);
+                return;
+            }
+
             SetImportItem(trackedDownload);
 
             // Only process tracked downloads that are still downloading
@@ -97,6 +108,12 @@ namespace NzbDrone.Core.Download
 
         public void Import(TrackedDownload trackedDownload)
         {
+            if (trackedDownload.DownloadItem.SkipImport)
+            {
+                SkipImport(trackedDownload);
+                return;
+            }
+
             SetImportItem(trackedDownload);
             trackedDownload.ClearStatus();
 
@@ -631,6 +648,31 @@ namespace NzbDrone.Core.Download
             _downloadClientFileSnapshotService.CaptureClientList(trackedDownload.ImportItem);
             _downloadClientFileSnapshotService.ApplySnapshot(trackedDownload.ImportItem);
             _downloadClientFileSnapshotService.ApplySnapshot(trackedDownload.DownloadItem);
+        }
+
+        private void SkipImport(TrackedDownload trackedDownload)
+        {
+            if (trackedDownload.State == TrackedDownloadState.Ignored)
+            {
+                return;
+            }
+
+            var remoteBook = trackedDownload.RemoteBook;
+            _logger.Info("Skipping library import for {0}; delivery is managed by {1}.",
+                trackedDownload.DownloadItem.Title, trackedDownload.DownloadItem.DownloadClientInfo.Name);
+            _eventAggregator.PublishEvent(new DownloadIgnoredEvent
+            {
+                AuthorId = remoteBook?.Author?.Id ?? 0,
+                BookIds = remoteBook?.Books?.Select(book => book.Id).ToList() ?? new List<int>(),
+                Quality = remoteBook?.ParsedBookInfo?.Quality ?? new QualityModel(Quality.Unknown),
+                SourceTitle = trackedDownload.DownloadItem.Title,
+                DownloadClientInfo = trackedDownload.DownloadItem.DownloadClientInfo,
+                DownloadId = trackedDownload.DownloadItem.DownloadId,
+                TrackedDownload = trackedDownload,
+                Message = "Library import skipped; delivery managed by the download client"
+            });
+            trackedDownload.State = TrackedDownloadState.Ignored;
+            PublishTrackedDownloadUpdated(trackedDownload);
         }
 
         private void PublishTrackedDownloadUpdated(TrackedDownload trackedDownload)

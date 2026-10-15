@@ -80,6 +80,51 @@ namespace Chaptarr.Core.Test.Download
             });
         }
 
+        [TestCase(DownloadProtocol.Usenet)]
+        [TestCase(DownloadProtocol.Torrent)]
+        [TestCase(DownloadProtocol.Direct)]
+        public async Task should_defer_remaining_releases_of_an_unavailable_protocol_without_blocking_other_protocols(DownloadProtocol protocol)
+        {
+            var service = new UnavailableDownloadService(protocol);
+            var subject = new ProcessDownloadDecisions(service, new IdentityPrioritizer(),
+                new NoopPendingReleaseService(), LogManager.GetCurrentClassLogger());
+            var first = BuildDecision(new Book { Id = 1 }, "First", Quality.EPUB);
+            var second = BuildDecision(new Book { Id = 2 }, "Second", Quality.EPUB);
+            var other = BuildDecision(new Book { Id = 3 }, "Other", Quality.EPUB);
+            first.RemoteBook.Release.DownloadProtocol = protocol;
+            second.RemoteBook.Release.DownloadProtocol = protocol;
+            other.RemoteBook.Release.DownloadProtocol = protocol == DownloadProtocol.Direct ? DownloadProtocol.Torrent : DownloadProtocol.Direct;
+
+            var result = await subject.ProcessDecisions(new List<DownloadDecision> { first, second, other });
+
+            Assert.That(service.Attempts, Is.EqualTo(2));
+            Assert.That(result.Pending, Has.Count.EqualTo(2));
+            Assert.That(result.Grabbed.Single(), Is.SameAs(other));
+        }
+
+        private sealed class UnavailableDownloadService : IDownloadService
+        {
+            private readonly DownloadProtocol _protocol;
+
+            public UnavailableDownloadService(DownloadProtocol protocol)
+            {
+                _protocol = protocol;
+            }
+
+            public int Attempts { get; private set; }
+
+            public Task DownloadReport(RemoteBook remoteBook, int? downloadClientId)
+            {
+                Attempts++;
+                if (remoteBook.Release.DownloadProtocol == _protocol)
+                {
+                    throw new DownloadClientUnavailableException("Client unavailable");
+                }
+
+                return Task.CompletedTask;
+            }
+        }
+
         private sealed class RecordingDownloadService : IDownloadService
         {
             public List<RemoteBook> Downloaded { get; } = new();

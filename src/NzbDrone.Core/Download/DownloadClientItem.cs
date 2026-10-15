@@ -29,6 +29,7 @@ namespace NzbDrone.Core.Download
         public bool CanBeRemoved { get; set; }
         public bool Removed { get; set; }
         public bool DownloadForced { get; set; }
+        public bool SkipImport { get; set; }
 
         // Optional: precise list of file paths reported by the download client for this item
         // When available, download import should prefer this list over directory enumeration
