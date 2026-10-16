@@ -137,6 +137,44 @@ def git_lines(repo_root: Path, args: list[str], error_context: str) -> list[str]
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
+def resolve_compare_ref(repo_root: Path, base_branch: str | None) -> str:
+    if base_branch:
+        git_lines(
+            repo_root,
+            ["fetch", "--no-tags", "origin", f"refs/heads/{base_branch}:refs/remotes/origin/{base_branch}"],
+            f"Failed to fetch comparison branch {base_branch}",
+        )
+        return f"origin/{base_branch}"
+
+    tag = subprocess.run(
+        ["git", "-C", str(repo_root), "describe", "--tags", "--match", "v*", "--abbrev=0", "HEAD"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if tag.returncode == 0:
+        return tag.stdout.strip()
+
+    # Forks do not inherit upstream release tags. Inspect only the branch's own
+    # commits, rather than auditing unrelated upstream history or skipping guards.
+    git_lines(
+        repo_root,
+        ["fetch", "--no-tags", "origin", "refs/heads/develop:refs/remotes/origin/develop"],
+        "No reachable version tag; failed to fetch the develop comparison branch",
+    )
+    comparison = git_lines(
+        repo_root, ["merge-base", "HEAD", "origin/develop"], "Failed to find the develop branch point"
+    )[0]
+    head = git_lines(repo_root, ["rev-parse", "HEAD"], "Failed to resolve HEAD")[0]
+    if comparison == head:
+        comparison = git_lines(
+            repo_root, ["rev-parse", "--verify", "HEAD^"],
+            "No reachable version tag or previous commit is available for version comparison",
+        )[0]
+
+    return comparison
+
+
 def load_snapshot_from_texts(label: str, package_text: str, props_text: str) -> VersionSnapshot:
     package_version = parse_package_version(package_text, f"{label} package.json")
     assembly_version, file_version = parse_props_versions(props_text, f"{label} src/Directory.Build.props")
@@ -317,6 +355,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("sync", help="Ensure package.json and Directory.Build.props are in sync")
 
+    compare_parser = subparsers.add_parser("compare-ref", help="Resolve a PR base, release tag, or tagless branch comparison")
+    compare_parser.add_argument("--base-branch", help="Pull request base branch (takes precedence over release tags)")
+
     release_parser = subparsers.add_parser("release-tag", help="Ensure a release tag matches repo version files")
     release_parser.add_argument("--tag", required=True, help="Git tag name (expected format: vX.Y.Z)")
 
@@ -338,6 +379,10 @@ def main() -> None:
 
     if args.command == "sync":
         guard_sync(repo_root)
+        return
+
+    if args.command == "compare-ref":
+        print(resolve_compare_ref(repo_root, args.base_branch))
         return
 
     if args.command == "release-tag":

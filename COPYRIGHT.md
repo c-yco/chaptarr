@@ -39,6 +39,13 @@ Chaptarr is developed and maintained with the assistance of AI tools.
 
 ## Third-Party Components
 
+Cover image resizing uses [Magick.NET](https://github.com/dlemstra/Magick.NET),
+licensed under Apache-2.0, and its bundled [ImageMagick](https://imagemagick.org/)
+native libraries, licensed under the ImageMagick License.
+
+PDF metadata extraction uses [PDFsharp](https://github.com/empira/PDFsharp),
+licensed under MIT.
+
 Chaptarr's optional audiobook conversion shells out to external tools that are
 bundled in the **official Chaptarr Docker image** — they are not part of this
 source tree. Each remains under its own license:

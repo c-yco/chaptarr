@@ -17,6 +17,7 @@
     <PackageReference Include="FluentMigrator.Runner.Postgres" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="MailKit" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NLog" />
     <PackageReference Include="NLog.Targets.Syslog" />
@@ -24,10 +25,10 @@
     <PackageReference Include="RestSharp" />
     <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="TagLibSharp-Lidarr" />
-    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" />
     <PackageReference Include="Equ" />
     <PackageReference Include="MonoTorrent" />
-    <PackageReference Include="PdfSharpCore" />
+    <PackageReference Include="PDFsharp" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
   </ItemGroup>

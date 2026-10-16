@@ -17,7 +17,7 @@ using NzbDrone.Core.MediaFiles.TagExtraction;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.RootFolders;
-using PdfSharpCore.Pdf.IO;
+using PdfSharp.Pdf.IO;
 using VersOne.Epub;
 using VersOne.Epub.Schema;
 
@@ -683,7 +683,7 @@ namespace NzbDrone.Core.MediaFiles
 
             try
             {
-                using var book = PdfReader.Open(file, PdfDocumentOpenMode.InformationOnly);
+                using var book = PdfReader.Open(file, PdfDocumentOpenMode.Import);
                 if (book.Info != null)
                 {
                     // Basic fields

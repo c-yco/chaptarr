@@ -53,25 +53,31 @@ jobs:
 
     - name: Guard (version) - package.json and Directory.Build.props in sync
       shell: bash
-      run: python3 build-tools/version_guard.py sync
+      run: |
+        python3 -m unittest discover -s build-tools -p test_version_guard.py
+        python3 build-tools/version_guard.py sync
+
+    - name: Resolve version comparison
+      id: version-comparison
+      shell: bash
+      env:
+        BASE_BRANCH: ${{ github.base_ref }}
+      run: |
+        set -euo pipefail
+        if [[ -n "$BASE_BRANCH" ]]; then
+          COMPARE_REF="$(python3 build-tools/version_guard.py compare-ref --base-branch "$BASE_BRANCH")"
+        else
+          COMPARE_REF="$(python3 build-tools/version_guard.py compare-ref)"
+        fi
+        echo "ref=$COMPARE_REF" >> "$GITHUB_OUTPUT"
 
     - name: Guard (version) - no decreases on develop
       if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
       shell: bash
+      env:
+        COMPARE_REF: ${{ steps.version-comparison.outputs.ref }}
       run: |
         set -euo pipefail
-
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          git fetch --no-tags origin "refs/heads/develop:refs/remotes/origin/develop"
-          COMPARE_REF="origin/develop"
-        else
-          COMPARE_REF="$(git describe --tags --match 'v*' --abbrev=0 HEAD 2>/dev/null || true)"
-
-          if [[ -z "$COMPARE_REF" ]]; then
-            echo "No reachable version tag is available for monotonic version comparison."
-            exit 1
-          fi
-        fi
 
         python3 build-tools/version_guard.py monotonic \
           --compare-ref "$COMPARE_REF" \
@@ -79,20 +85,10 @@ jobs:
 
     - name: Guard (version) - version-only commits stay pure
       shell: bash
+      env:
+        COMPARE_REF: ${{ steps.version-comparison.outputs.ref }}
       run: |
         set -euo pipefail
-
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          git fetch --no-tags origin "refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-          COMPARE_REF="origin/${{ github.base_ref }}"
-        else
-          COMPARE_REF="$(git describe --tags --match 'v*' --abbrev=0 HEAD 2>/dev/null || true)"
-
-          if [[ -z "$COMPARE_REF" ]]; then
-            echo "No reachable version tag is available for version-only commit hygiene."
-            exit 1
-          fi
-        fi
 
         python3 build-tools/version_guard.py commit-hygiene --compare-ref "$COMPARE_REF"
     

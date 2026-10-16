@@ -97,6 +97,10 @@ yarn watch
 
 ## Testing
 
+- Run version-guard regression tests with `python -m unittest discover -s build-tools -p test_version_guard.py`.
+  CI compares pull requests with their base branch and other builds with the latest
+  reachable release tag. Tagless forks use their branch point on `origin/develop`;
+  builds at that branch point check the preceding commit instead.
 - Test your changes locally first
 - Include unit tests for new functionality
 - Ensure existing tests pass
